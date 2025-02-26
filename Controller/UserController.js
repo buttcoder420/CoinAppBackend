@@ -19,6 +19,21 @@ const requireSign = [
     next();
   },
 ];
+const IsAdmin = async (req, res, next) => {
+  try {
+    const user = await UserRegisterModel.findById(req.auth._id);
+    if (!user || user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Access denied! Admin only." });
+    }
+    next();
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Server error: " + error.message });
+  }
+};
 // Nodemailer transporter setup
 /*const transporter = nodemailer.createTransport({
   service: "Gmail",
@@ -153,7 +168,7 @@ const registerController = async (req, res) => {
 
     // Generate referral code and link
     const newReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
-    const referralLink = `https://coin-tube-backend-el9n.onrender.com/login?referralCode=${newReferralCode}`;
+    const referralLink = `https://coinappbackend.onrender.com/login?referralCode=${newReferralCode}`;
 
     // Generate verification token
     //const verificationToken = crypto.randomBytes(20).toString("hex");
@@ -257,10 +272,88 @@ const getUserBalance = async (req, res) => {
   }
 };
 
+// Get All Users
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserRegisterModel.find({}, "name email phone role");
+    res.status(200).json({ success: true, TotalUser: users.length, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
+// Get Single User
+const getUserById = async (req, res) => {
+  try {
+    const user = await UserRegisterModel.findById(
+      req.params.id,
+      "name email phone role"
+    );
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
+// Update User
+const updateUser = async (req, res) => {
+  try {
+    const { name, email, phone, role } = req.body;
+    const updatedUser = await UserRegisterModel.findByIdAndUpdate(
+      req.params.id,
+      { name, email, phone, role },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
+// Delete User
+const deleteUser = async (req, res) => {
+  try {
+    const deletedUser = await UserRegisterModel.findByIdAndDelete(
+      req.params.id
+    );
+    if (!deletedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    res
+      .status(200)
+      .json({ success: true, message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error });
+  }
+};
+
 module.exports = {
   requireSign,
+  IsAdmin,
   loginController,
   registerController,
   getUserBalance,
   //verifyEmailController,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
 };
