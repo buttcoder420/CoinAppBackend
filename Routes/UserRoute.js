@@ -32,6 +32,6 @@ router.get("/get-single/:id", requireSign, IsAdmin, getUserById);
 router.put("/update-user/:id", requireSign, IsAdmin, updateUser);
 
 // Delete user (Admin only)
-router.delete("/delete user/:id", requireSign, IsAdmin, deleteUser);
+router.delete("/delete/:id", requireSign, IsAdmin, deleteUser);
 
 module.exports = router;
