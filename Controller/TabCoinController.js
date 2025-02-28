@@ -38,7 +38,7 @@ const addCoin = async (req, res) => {
     }
 
     // Check if daily limit is reached
-    if (userCoinData.taps.length >= 1000) {
+    if (userCoinData.taps.length >= 10) {
       return res
         .status(400)
         .json({ message: "Daily tap limit reached (1000)." });
