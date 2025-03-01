@@ -1,6 +1,7 @@
 const { expressjwt: jwt } = require("express-jwt");
 const TapCoinModel = require("../Models/TapCoinModel");
 const UserRegisterModel = require("../Models/UserRegisterModel");
+
 const requireSign = [
   jwt({
     secret: process.env.JWT_SECRET,
@@ -13,16 +14,15 @@ const requireSign = [
     next();
   },
 ];
+
 const addCoinTap = async (req, res) => {
   const userId = req.auth?._id;
-  const { x, y } = req.body; // User ID aur tap coordinates
+  const { x, y } = req.body;
 
   try {
-    // Step 1: Check if the user exists in the CoinTab schema
     let coinTabRecord = await TapCoinModel.findOne({ userId });
 
     if (!coinTabRecord) {
-      // Agar record nahi hai, toh naya record create karein
       coinTabRecord = new TapCoinModel({
         userId,
         coins: 0,
@@ -31,7 +31,6 @@ const addCoinTap = async (req, res) => {
       });
     }
 
-    // Step 2: Check if the user has reached the daily limit
     if (coinTabRecord.remainingLimit <= 0) {
       return res.status(400).json({
         success: false,
@@ -40,33 +39,27 @@ const addCoinTap = async (req, res) => {
       });
     }
 
-    // Step 3: Check if the user's coins are less than 1000
     if (coinTabRecord.coins < 1000) {
-      // Agar coins 1000 se kam hai, toh existing record mein update karein
-      coinTabRecord.coins += 1; // 1 coin add karein
-      coinTabRecord.taps.push({ x, y }); // Tap coordinates add karein
-      coinTabRecord.remainingLimit -= 1; // Daily limit decrement karein
+      coinTabRecord.coins += 1;
+      coinTabRecord.taps.push({ x, y });
+      coinTabRecord.remainingLimit -= 1;
     } else {
-      // Agar coins 1000 se zyada hai, toh naya record create karein
       coinTabRecord = new TapCoinModel({
         userId,
-        coins: 1, // Naya record, 1 coin se start karein
-        taps: [{ x, y }], // Tap coordinates add karein
-        remainingLimit: 9, // Kyunki 1 tap use ho gaya hai
+        coins: 1,
+        taps: [{ x, y }],
+        remainingLimit: 9,
       });
     }
 
-    // Step 4: Save the updated CoinTab record
     await coinTabRecord.save();
 
-    // Step 5: Update the user's total coins in the User schema
     const user = await UserRegisterModel.findById(userId);
     if (user) {
-      user.coin += 1; // User ke total coins mein 1 add karein
+      user.coin += 1;
       await user.save();
     }
 
-    // Step 6: Send success response
     res.status(200).json({
       success: true,
       message: "Coin added successfully!",
@@ -84,4 +77,69 @@ const addCoinTap = async (req, res) => {
   }
 };
 
-module.exports = { requireSign, addCoinTap };
+const getRemainingLimit = async (req, res) => {
+  const userId = req.auth?._id;
+
+  try {
+    const coinTabRecord = await TapCoinModel.findOne({ userId });
+
+    if (!coinTabRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "User record not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        remainingLimit: coinTabRecord.remainingLimit,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching remaining limit:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch remaining limit.",
+    });
+  }
+};
+
+const resetDailyLimit = async (req, res) => {
+  const userId = req.auth?._id;
+
+  try {
+    const coinTabRecord = await TapCoinModel.findOne({ userId });
+
+    if (!coinTabRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "User record not found.",
+      });
+    }
+
+    coinTabRecord.remainingLimit = 10;
+    await coinTabRecord.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Daily limit reset successfully!",
+      data: {
+        remainingLimit: coinTabRecord.remainingLimit,
+      },
+    });
+  } catch (error) {
+    console.error("Error resetting daily limit:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reset daily limit.",
+    });
+  }
+};
+
+module.exports = {
+  requireSign,
+  addCoinTap,
+  getRemainingLimit,
+  resetDailyLimit,
+};
