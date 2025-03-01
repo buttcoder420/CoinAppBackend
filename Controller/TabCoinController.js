@@ -1,70 +1,87 @@
-var { expressjwt: jwt } = require("express-jwt");
+const { expressjwt: jwt } = require("express-jwt");
 const TapCoinModel = require("../Models/TapCoinModel");
 const UserRegisterModel = require("../Models/UserRegisterModel");
-
-// Middleware for requiring a signed-in user
-const requireSign = jwt({
-  secret: process.env.JWT_SECRET,
-  algorithms: ["HS256"],
-  requestProperty: "auth", // Adds the user data to req.auth
-});
-
-// Controller to add a coin for the logged-in user
-const addCoin = async (req, res) => {
-  try {
-    const userId = req.auth?._id; // Get user ID from token
-    const { x, y } = req.body; // Tap position coordinates
-
-    // Validate tap coordinates
-    if (x === undefined || y === undefined) {
-      return res
-        .status(400)
-        .json({ message: "Tap coordinates (x, y) are required" });
+const requireSign = [
+  jwt({
+    secret: process.env.JWT_SECRET,
+    algorithms: ["HS256"],
+  }),
+  (err, req, res, next) => {
+    if (err && err.name === "UnauthorizedError") {
+      return res.status(401).json({ message: "Invalid or missing token" });
     }
+    next();
+  },
+];
+const addCoinTap = async (req, res) => {
+  const userId = req.auth?._id;
+  const { x, y } = req.body; // User ID aur tap coordinates
 
-    const today = new Date().toISOString().split("T")[0]; // Get today's date (YYYY-MM-DD format)
+  try {
+    // Step 1: Check if the user exists in the CoinTab schema
+    let coinTabRecord = await TapCoinModel.findOne({ userId });
 
-    // Find today's coin data for the user
-    let userCoinData = await TapCoinModel.findOne({ userId, date: today });
-
-    // If no record for today, create a new entry
-    if (!userCoinData) {
-      userCoinData = new TapCoinModel({
+    if (!coinTabRecord) {
+      // Agar record nahi hai, toh naya record create karein
+      coinTabRecord = new TapCoinModel({
         userId,
         coins: 0,
         taps: [],
-        date: today,
+        remainingLimit: 10,
       });
     }
 
-    // Check if daily limit is reached
-    if (userCoinData.taps.length >= 10) {
-      return res
-        .status(400)
-        .json({ message: "Daily tap limit reached (1000)." });
+    // Step 2: Check if the user has reached the daily limit
+    if (coinTabRecord.remainingLimit <= 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "You have reached your daily limit. Please try again tomorrow.",
+      });
     }
 
-    // Increment coins and save tap
-    userCoinData.coins += 1;
-    userCoinData.taps.push({ x, y });
+    // Step 3: Check if the user's coins are less than 1000
+    if (coinTabRecord.coins < 1000) {
+      // Agar coins 1000 se kam hai, toh existing record mein update karein
+      coinTabRecord.coins += 1; // 1 coin add karein
+      coinTabRecord.taps.push({ x, y }); // Tap coordinates add karein
+      coinTabRecord.remainingLimit -= 1; // Daily limit decrement karein
+    } else {
+      // Agar coins 1000 se zyada hai, toh naya record create karein
+      coinTabRecord = new TapCoinModel({
+        userId,
+        coins: 1, // Naya record, 1 coin se start karein
+        taps: [{ x, y }], // Tap coordinates add karein
+        remainingLimit: 9, // Kyunki 1 tap use ho gaya hai
+      });
+    }
 
-    await userCoinData.save();
+    // Step 4: Save the updated CoinTab record
+    await coinTabRecord.save();
 
-    // Update user model coin balance
-    await UserRegisterModel.findByIdAndUpdate(userId, { $inc: { coin: 1 } });
+    // Step 5: Update the user's total coins in the User schema
+    const user = await UserRegisterModel.findById(userId);
+    if (user) {
+      user.coin += 1; // User ke total coins mein 1 add karein
+      await user.save();
+    }
 
+    // Step 6: Send success response
     res.status(200).json({
-      message: "Coin added successfully",
-      dailyCoins: userCoinData.coins,
-      totalTaps: userCoinData.taps.length,
+      success: true,
+      message: "Coin added successfully!",
+      data: {
+        coins: coinTabRecord.coins,
+        remainingLimit: coinTabRecord.remainingLimit,
+      },
     });
   } catch (error) {
-    console.error("Error adding coin:", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error adding coin tap:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to add coin tap",
+    });
   }
 };
 
-module.exports = {
-  requireSign,
-  addCoin,
-};
+module.exports = { requireSign, addCoinTap };
