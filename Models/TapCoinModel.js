@@ -20,6 +20,8 @@ const coinTabSchema = new mongoose.Schema({
       y: Number, // Y coordinate of the tap
     },
   ],
+  DailyLimit: { type: Number, default: 10 },
+  remainingLimit: { type: Number },
 });
 
 module.exports = mongoose.model("CoinTab", coinTabSchema);
