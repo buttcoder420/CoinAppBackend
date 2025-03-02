@@ -1,10 +1,10 @@
 const express = require("express");
 const {
   requireSign,
-  getRemainingLimit,
   addCoinTap,
+  getRemainingLimit,
   resetDailyLimit,
-} = require("../Controller/TapCoinController");
+} = require("../Controller/CoinTapController");
 
 const router = express.Router();
 
