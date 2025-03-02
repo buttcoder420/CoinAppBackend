@@ -275,13 +275,25 @@ const getUserBalance = async (req, res) => {
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
+    // Fetching only the required fields
     const users = await UserRegisterModel.find(
       {},
       "name email phone coin role"
     );
-    res.status(200).json({ success: true, TotalUser: users.length, users });
+
+    // Respond with the total number of users and their details
+    res.status(200).json({
+      success: true,
+      TotalUser: users.length, // Counting the number of users
+      users, // Sending the users data
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    // Handling errors and sending a response
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message || error, // Displaying specific error message
+    });
   }
 };
 
