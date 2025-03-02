@@ -275,7 +275,10 @@ const getUserBalance = async (req, res) => {
 // Get All Users
 const getAllUsers = async (req, res) => {
   try {
-    const users = await UserRegisterModel.find({}, "name email phone role");
+    const users = await UserRegisterModel.find(
+      {},
+      "name email phone coin role"
+    );
     res.status(200).json({ success: true, TotalUser: users.length, users });
   } catch (error) {
     res.status(500).json({ success: false, message: "Server error", error });
