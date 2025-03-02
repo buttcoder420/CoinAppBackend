@@ -48,7 +48,7 @@ const addCoinTap = async (req, res) => {
         userId,
         coins: 1,
         taps: [{ x, y }],
-        remainingLimit: 9,
+        remainingLimit: 999,
       });
     }
 
