@@ -1,8 +1,8 @@
 const express = require("express");
 const {
   requireSign,
-  addCoinTap,
   getRemainingLimit,
+  addCoinTap,
   resetDailyLimit,
 } = require("../Controller/TapCoinController");
 
