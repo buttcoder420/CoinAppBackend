@@ -5,6 +5,7 @@ const {
   requireSign,
   getAllAccounts,
   getConnectedAccounts,
+  setAccountConnectionStatus,
 } = require("../Controller/AccountController");
 const router = express.Router();
 
@@ -17,5 +18,7 @@ router.post("/disconnect", requireSign, disconnectWallet);
 router.get("/get-account", requireSign, getAllAccounts);
 
 router.get("/get-connect-account", requireSign, getConnectedAccounts);
+
+router.put("/account/:accountId", requireSign, setAccountConnectionStatus);
 
 module.exports = router;
