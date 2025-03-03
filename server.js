@@ -21,6 +21,7 @@ app.use("/api/v1/reward", require("./Routes/DailyRewardRoute"));
 app.use("/api/v1/userreward", require("./Routes/UserRewardRoute"));
 app.use("/api/v1/coin", require("./Routes/TapCoinRoute"));
 app.use("/api/v1/ads", require("./Routes/AdsRoute"));
+app.use("/api/v1/account", require("./Routes/AccountRoute"));
 
 app.get("/", (req, res) => {
   res.send("Welcome to web");
