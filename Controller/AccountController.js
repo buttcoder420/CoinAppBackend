@@ -127,10 +127,42 @@ const getConnectedAccounts = async (req, res) => {
   }
 };
 
+const setAccountConnectionStatus = async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const userId = req.auth?._id; // Ensure user authentication
+
+    // Disconnect all other accounts of the user
+    await AccountModel.updateMany(
+      { userId },
+      { connectionStatus: "disconnected" }
+    );
+
+    // Connect the selected account
+    const updatedAccount = await AccountModel.findByIdAndUpdate(
+      accountId,
+      { connectionStatus: "connected" },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Account connected successfully",
+      data: updatedAccount,
+    });
+  } catch (error) {
+    console.error("Error updating account connection status:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   requireSign,
   connectWallet,
   disconnectWallet,
   getAllAccounts,
   getConnectedAccounts,
+  setAccountConnectionStatus,
 };
