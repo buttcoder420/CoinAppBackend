@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const coinTabSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "users",
+    ref: "User",
     required: true,
   },
   coins: {
@@ -20,7 +20,7 @@ const coinTabSchema = new mongoose.Schema({
       y: Number, // Y coordinate of the tap
     },
   ],
-  DailyLimit: { type: Number, default: 10 },
+  DailyLimit: { type: Number, default: 1000 },
   remainingLimit: { type: Number },
 });
 
