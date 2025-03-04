@@ -10,6 +10,7 @@ const {
   getUserById,
   updateUser,
   deleteUser,
+  convertAmountToCoins,
 } = require("../Controller/UserController");
 const { IsAdmin } = require("../Controller/DailyRewardController");
 
@@ -33,5 +34,7 @@ router.put("/update-user/:id", requireSign, IsAdmin, updateUser);
 
 // Delete user (Admin only)
 router.delete("/delete/:id", requireSign, IsAdmin, deleteUser);
+
+router.post("/convert-coins", requireSign, convertAmountToCoins);
 
 module.exports = router;
