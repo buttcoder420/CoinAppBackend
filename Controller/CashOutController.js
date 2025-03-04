@@ -33,58 +33,53 @@ const IsAdmin = async (req, res, next) => {
 // Controller to handle user cash-out request
 const requestCashOut = async (req, res) => {
   try {
-    const userId = req.auth?._id; // Assume req.user se current logged-in user ka ID mil raha hai
-    const { coinAmount, walletId } = req.body; // Frontend se coinAmount aur walletId aayega
+    const userId = req.auth?._id;
+    const { accountId, coinAmount } = req.body;
 
-    // 1. Check if the user has a connected wallet
-    const wallet = await AccountModel.findOne({
-      userId,
-      _id: walletId,
-      connectionStatus: "connected",
-    });
-
-    if (!wallet) {
+    // Validate minimum amount
+    if (!coinAmount || coinAmount < 1000) {
       return res
         .status(400)
-        .json({ message: "Wallet not connected or does not exist!" });
+        .json({ message: "Minimum 1000 coins required for cash-out." });
     }
 
-    // 2. Check if the user has enough coins
+    // Find user
     const user = await UserRegisterModel.findById(userId);
-    if (!user || user.coin < coinAmount) {
-      return res.status(400).json({ message: "Insufficient coins!" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
     }
 
-    // 3. Minimum 1000 coins required for cashout
-    if (coinAmount < 1000) {
-      return res
-        .status(400)
-        .json({ message: "Minimum 1000 coins required for cashout!" });
+    // Check if user has enough coins
+    if (user.coin < coinAmount) {
+      return res.status(400).json({ message: "Insufficient coin balance." });
     }
 
-    // 4. Deduct coins from user account
+    // Deduct coins from user balance
     user.coin -= coinAmount;
     await user.save();
 
-    // 5. Create cashout request
-    const cashOutRequest = new CashOutModel({
+    // Create a new cash-out request
+    const newCashOut = new CashOutModel({
       userId,
-      accountId: walletId,
+      accountId,
       coinAmount,
       status: "calculating",
     });
 
-    await cashOutRequest.save();
+    await newCashOut.save();
 
-    res.status(200).json({
-      message: "Cashout request submitted successfully!",
-      cashOutRequest,
+    return res.status(201).json({
+      message: "Cash-out request submitted successfully.",
+      cashOutRequest: newCashOut,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error!" });
+    console.error("Cash-out request error:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error. Please try again later." });
   }
 };
+
 // Admin controller to manage all cash-out requests
 const getAllCashOutRequests = async (req, res) => {
   try {
