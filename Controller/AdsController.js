@@ -49,7 +49,7 @@ const watchAd = async (req, res) => {
 
     // Define rewards
     const adsCoin = 100;
-    const adsAmount = 0.009;
+    const adsAmount = 0.09;
 
     // Store Ad Watch Data
     const newAd = new AdsModel({
