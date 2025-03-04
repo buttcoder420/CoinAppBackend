@@ -360,6 +360,53 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const convertAmountToCoins = async (req, res) => {
+  try {
+    const userId = req.auth._id;
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid amount" });
+    }
+
+    const user = await UserRegisterModel.findById(userId);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.amount < amount) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Insufficient balance" });
+    }
+
+    // Conversion logic: 1 USD = 1000 coins
+    const convertedCoins = amount * 1000;
+
+    // Deduct amount and add coins
+    user.amount -= amount;
+    user.coin = (user.coin || 0) + convertedCoins;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Amount successfully converted to coins",
+      coinsAdded: convertedCoins,
+      remainingBalance: user.amount,
+      totalCoins: user.coin,
+    });
+  } catch (error) {
+    console.error("Error in conversion:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   requireSign,
   IsAdmin,
@@ -371,4 +418,5 @@ module.exports = {
   getUserById,
   updateUser,
   deleteUser,
+  convertAmountToCoins,
 };
