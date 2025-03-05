@@ -108,6 +108,35 @@ const getAllCashOutRequests = async (req, res) => {
   }
 };
 
+const getUserCashOutRequests = async (req, res) => {
+  try {
+    const userId = req.auth?._id; // ✅ Logged-in user ID
+
+    // Check if user exists
+    const user = await UserRegisterModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Fetch all cash-out requests for the logged-in user
+    const cashOutRequests = await CashOutModel.find({ userId })
+      .populate({
+        path: "accountId",
+        select: "walletNumber walletType", // ✅ Wallet details
+      })
+      .sort({ createdAt: -1 }); // ✅ Latest requests first
+
+    return res.status(200).json({
+      success: true,
+      TotalCashOut: cashOutRequests.length,
+      cashOutRequests,
+    });
+  } catch (error) {
+    console.error("Error fetching user cash-out requests:", error);
+    return res.status(500).json({ message: "Something went wrong." });
+  }
+};
+
 // Admin controller to update the status of a cash-out request
 const updateCashOutStatus = async (req, res) => {
   try {
@@ -164,4 +193,5 @@ module.exports = {
   getAllCashOutRequests,
   updateCashOutStatus,
   deleteCashOutRequest,
+  getUserCashOutRequests,
 };
