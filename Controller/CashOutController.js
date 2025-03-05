@@ -31,19 +31,27 @@ const IsAdmin = async (req, res, next) => {
 };
 
 // Controller to handle user cash-out request
+
 const requestCashOut = async (req, res) => {
   try {
-    const userId = req.auth?._id;
     const { accountId, coinAmount } = req.body;
+    const userId = req.auth?._id; // Assuming user is logged in and middleware is setting req.user
 
-    // Validate minimum amount
-    if (!coinAmount || coinAmount < 1000) {
+    // Validate input
+    if (!accountId || !coinAmount) {
       return res
         .status(400)
-        .json({ message: "Minimum 1000 coins required for cash-out." });
+        .json({ message: "Account and coin amount are required." });
     }
 
-    // Find user
+    // Minimum coins validation
+    if (coinAmount < 1000) {
+      return res
+        .status(400)
+        .json({ message: "Minimum cash-out amount is 1000 coins." });
+    }
+
+    // Get user data
     const user = await UserRegisterModel.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found." });
@@ -51,32 +59,30 @@ const requestCashOut = async (req, res) => {
 
     // Check if user has enough coins
     if (user.coin < coinAmount) {
-      return res.status(400).json({ message: "Insufficient coin balance." });
+      return res.status(400).json({ message: "Insufficient coins." });
     }
 
-    // Deduct coins from user balance
+    // Deduct coins from user account
     user.coin -= coinAmount;
     await user.save();
 
-    // Create a new cash-out request
-    const newCashOut = new CashOutModel({
+    // Create cash-out request
+    const cashOutRequest = new CashOutModel({
       userId,
       accountId,
       coinAmount,
       status: "calculating",
     });
 
-    await newCashOut.save();
+    await cashOutRequest.save();
 
     return res.status(201).json({
       message: "Cash-out request submitted successfully.",
-      cashOutRequest: newCashOut,
+      cashOutRequest: cashOutRequest,
     });
   } catch (error) {
-    console.error("Cash-out request error:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error. Please try again later." });
+    console.error("Cash-out error:", error);
+    return res.status(500).json({ message: "Something went wrong." });
   }
 };
 
