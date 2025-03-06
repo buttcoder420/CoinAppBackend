@@ -7,6 +7,7 @@ const {
   IsAdmin,
   deleteCashOutRequest,
   getUserCashOutRequests,
+  getCalculatingCashOutsCount,
 } = require("../Controller/CashOutController");
 const router = express.Router();
 
@@ -24,5 +25,7 @@ router.put(
   updateCashOutStatus
 );
 router.delete("/admin/cash-out/:id", requireSign, deleteCashOutRequest);
+
+router.get("/get-cash-no", requireSign, getCalculatingCashOutsCount);
 
 module.exports = router;
