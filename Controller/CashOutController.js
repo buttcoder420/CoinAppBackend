@@ -185,9 +185,35 @@ const deleteCashOutRequest = async (req, res) => {
   }
 };
 
+// Controller to get the total number of "calculating" status cash-outs
+const getCalculatingCashOutsCount = async (req, res) => {
+  try {
+    // Find all cash-out requests with "calculating" status
+    const calculatingCashOuts = await CashOutModel.countDocuments({
+      status: "calculating",
+    });
+
+    if (calculatingCashOuts === null) {
+      return res.status(404).json({
+        message: "No cash-out requests found with calculating status.",
+      });
+    }
+
+    // Return the total count of cash-out requests with "calculating" status
+    return res.status(200).json({
+      success: true,
+      totalCalculatingCashOuts: calculatingCashOuts,
+    });
+  } catch (error) {
+    console.error("Error fetching calculating cash-out requests:", error);
+    return res.status(500).json({ message: "Something went wrong." });
+  }
+};
+
 module.exports = {
   requireSign,
   IsAdmin,
+  getCalculatingCashOutsCount,
   requestCashOut,
   getAllCashOutRequests,
   updateCashOutStatus,
