@@ -14,6 +14,7 @@ const requireSign = [
     next();
   },
 ];
+
 const IsAdmin = async (req, res, next) => {
   try {
     const user = await UserRegisterModel.findById(req.auth._id);
@@ -29,7 +30,6 @@ const IsAdmin = async (req, res, next) => {
       .json({ success: false, message: "Server error: " + error.message });
   }
 };
-
 // Controller to handle user cash-out request
 
 const requestCashOut = async (req, res) => {
@@ -89,22 +89,20 @@ const requestCashOut = async (req, res) => {
 // Admin controller to manage all cash-out requests
 const getAllCashOutRequests = async (req, res) => {
   try {
-    const cashOutRequests = await CashOutModel.find()
-      .populate({
-        path: "accountId", // WalletConnection se related data lana hai
-        select: "walletNumber walletType", // Sirf ye fields chahiye
-      })
-      .populate({
-        path: "userId", // Agar user ka bhi data lana ho to yahan mention kar sakte ho
-        select: "name email", // Example fields
-      });
+    const cashOuts = await CashOutModel.find()
+      .populate("userId", "name email")
+      .populate("accountId", "walletType walletNumber");
 
-    return res.status(200).json(cashOutRequests);
+    if (!cashOuts) {
+      return res.status(404).json({ message: "No cashout requests found" });
+    }
+
+    res.status(200).json(cashOuts);
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({
-      message: err.message || "Server error. Please try again later.",
-    });
+    console.error("Cashout Fetch Error:", err.message); // Error log karo
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: err.message });
   }
 };
 
@@ -140,7 +138,8 @@ const getUserCashOutRequests = async (req, res) => {
 // Admin controller to update the status of a cash-out request
 const updateCashOutStatus = async (req, res) => {
   try {
-    const { id, status } = req.body; // 'id' is the CashOut record ID and 'status' is the new status
+    const { id } = req.params;
+    const { status } = req.body; // 'id' is the CashOut record ID and 'status' is the new status
     if (!["calculating", "completed", "failed"].includes(status)) {
       return res.status(400).json({ message: "Invalid status provided." });
     }
