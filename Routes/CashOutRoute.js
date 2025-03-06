@@ -18,7 +18,7 @@ router.get("/cash-out", requireSign, getAllCashOutRequests);
 router.get("/get-single-cashOut", requireSign, getUserCashOutRequests);
 
 router.put(
-  "/cash-out/update-status",
+  "/cash-out/update-status/:id",
   requireSign,
 
   updateCashOutStatus
