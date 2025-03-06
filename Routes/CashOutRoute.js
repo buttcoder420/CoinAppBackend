@@ -20,14 +20,9 @@ router.get("/get-single-cashOut", requireSign, getUserCashOutRequests);
 router.put(
   "/cash-out/update-status",
   requireSign,
-  IsAdmin,
+
   updateCashOutStatus
 );
-router.delete(
-  "/admin/cash-out/:id",
-  requireSign,
-  IsAdmin,
-  deleteCashOutRequest
-);
+router.delete("/admin/cash-out/:id", requireSign, deleteCashOutRequest);
 
 module.exports = router;
