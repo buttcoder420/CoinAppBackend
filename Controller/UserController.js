@@ -146,11 +146,20 @@ const registerController = async (req, res) => {
   try {
     const { name, email, phone, password, referralCode } = req.body;
 
-    // Validation
+    // Enhanced Validation
     if (!name || !email || !password) {
       return res.status(400).send({
         success: false,
         message: "Name, email, and password are required",
+      });
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).send({
+        success: false,
+        message: "Please enter a valid email address",
       });
     }
 
@@ -166,14 +175,11 @@ const registerController = async (req, res) => {
     // Hash password
     const hashedPassword = await HashPassword(password);
 
-    // Generate referral code and link
+    // Generate referral code and link for the new user
     const newReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
     const referralLink = `https://coinappbackend.onrender.com/login?referralCode=${newReferralCode}`;
 
-    // Generate verification token
-    //const verificationToken = crypto.randomBytes(20).toString("hex");
-
-    // Register new user
+    // Create new user object
     const userRegister = new UserRegisterModel({
       name,
       email,
@@ -181,35 +187,62 @@ const registerController = async (req, res) => {
       password: hashedPassword,
       referralCode: newReferralCode,
       referralLink,
-      //verificationToken,
+      coin: 0, // Initialize with 0
+      amount: 0, // Initialize with 0
     });
 
     // Handle referral logic
     if (referralCode) {
-      const referringUser = await UserModel.findOne({ referralCode });
-      if (referringUser) {
-        referringUser.totalReferred = (referringUser.totalReferred || 0) + 1;
-        await referringUser.save();
-
-        userRegister.referredBy = referralCode;
+      // Validate referral code format
+      if (!/^[A-F0-9]{8}$/.test(referralCode)) {
+        return res.status(400).send({
+          success: false,
+          message: "Invalid referral code format",
+        });
       }
+
+      const referringUser = await UserRegisterModel.findOne({
+        referralCode: referralCode,
+      });
+
+      if (!referringUser) {
+        return res.status(400).send({
+          success: false,
+          message: "The referral code you entered is invalid",
+        });
+      }
+
+      // Add bonuses to new user
+      userRegister.coin += 1000;
+      userRegister.amount += 1;
+      userRegister.referredBy = referralCode;
+
+      // Add bonuses to referring user
+      referringUser.coin += 500;
+      referringUser.amount += 0.3;
+      referringUser.totalReferred = (referringUser.totalReferred || 0) + 1;
+
+      await referringUser.save();
     }
 
+    // Save the new user
     await userRegister.save();
-
-    // Send verification email
-    //await sendVerificationEmail(email, verificationToken);
 
     res.status(201).send({
       success: true,
-      message: "User registered successfully. Please login.",
+      message: "User registered successfully",
+      data: {
+        referralCode: newReferralCode,
+        referralLink,
+        bonusReceived: !!referralCode,
+      },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
     res.status(500).send({
       success: false,
-      message: "Error in registration",
-      error,
+      message: "Registration failed. Please try again.",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
