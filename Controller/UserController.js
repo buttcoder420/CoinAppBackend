@@ -307,7 +307,7 @@ const getUserById = async (req, res) => {
   try {
     const user = await UserRegisterModel.findById(
       req.params.id,
-      "name email phone role"
+      "name email phone role coin amount"
     );
     if (!user) {
       return res
