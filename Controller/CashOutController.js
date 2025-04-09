@@ -45,10 +45,10 @@ const requestCashOut = async (req, res) => {
     }
 
     // Minimum coins validation
-    if (coinAmount < 1000) {
+    if (coinAmount < 20000) {
       return res
         .status(400)
-        .json({ message: "Minimum cash-out amount is 1000 coins." });
+        .json({ message: "Minimum cash-out amount is 20000 coins." });
     }
 
     // Get user data
