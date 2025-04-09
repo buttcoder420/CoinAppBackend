@@ -146,20 +146,11 @@ const registerController = async (req, res) => {
   try {
     const { name, email, phone, password, referralCode } = req.body;
 
-    // Enhanced Validation
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).send({
         success: false,
         message: "Name, email, and password are required",
-      });
-    }
-
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).send({
-        success: false,
-        message: "Please enter a valid email address",
       });
     }
 
@@ -179,7 +170,7 @@ const registerController = async (req, res) => {
     const newReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase();
     const referralLink = `https://coinappbackend.onrender.com/login?referralCode=${newReferralCode}`;
 
-    // Create new user object
+    // Register new user
     const userRegister = new UserRegisterModel({
       name,
       email,
@@ -187,42 +178,28 @@ const registerController = async (req, res) => {
       password: hashedPassword,
       referralCode: newReferralCode,
       referralLink,
-      coin: 0, // Initialize with 0
-      amount: 0, // Initialize with 0
     });
 
     // Handle referral logic
     if (referralCode) {
-      // Validate referral code format
-      if (!/^[A-F0-9]{8}$/.test(referralCode)) {
-        return res.status(400).send({
-          success: false,
-          message: "Invalid referral code format",
-        });
+      const referringUser = await UserRegisterModel.findOne({ referralCode });
+
+      if (referringUser) {
+        // Add coins and amount to the new user (referred user)
+        userRegister.coin = (userRegister.coin || 0) + 1000; // Add 1000 coins
+        userRegister.amount = (userRegister.amount || 0) + 1; // Add 1 USD
+
+        // Add coins and amount to the referring user
+        referringUser.coin = (referringUser.coin || 0) + 500; // Add 500 coins
+        referringUser.amount = (referringUser.amount || 0) + 0.3; // Add 0.3 USD
+        referringUser.totalReferred = (referringUser.totalReferred || 0) + 1;
+
+        // Save the updated referring user's data
+        await referringUser.save();
+
+        // Mark the new user as referred by the referring user
+        userRegister.referredBy = referralCode;
       }
-
-      const referringUser = await UserRegisterModel.findOne({
-        referralCode: referralCode,
-      });
-
-      if (!referringUser) {
-        return res.status(400).send({
-          success: false,
-          message: "The referral code you entered is invalid",
-        });
-      }
-
-      // Add bonuses to new user
-      userRegister.coin += 1000;
-      userRegister.amount += 1;
-      userRegister.referredBy = referralCode;
-
-      // Add bonuses to referring user
-      referringUser.coin += 500;
-      referringUser.amount += 0.3;
-      referringUser.totalReferred = (referringUser.totalReferred || 0) + 1;
-
-      await referringUser.save();
     }
 
     // Save the new user
@@ -230,19 +207,14 @@ const registerController = async (req, res) => {
 
     res.status(201).send({
       success: true,
-      message: "User registered successfully",
-      data: {
-        referralCode: newReferralCode,
-        referralLink,
-        bonusReceived: !!referralCode,
-      },
+      message: "User registered successfully. Please login.",
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error(error);
     res.status(500).send({
       success: false,
-      message: "Registration failed. Please try again.",
-      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+      message: "Error in registration",
+      error,
     });
   }
 };
@@ -354,7 +326,7 @@ const updateUser = async (req, res) => {
     const { name, email, phone, role } = req.body;
     const updatedUser = await UserRegisterModel.findByIdAndUpdate(
       req.params.id,
-      { name, email, phone, role },
+      { name, email, phone, role, coin, amount },
       { new: true }
     );
 
