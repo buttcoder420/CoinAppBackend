@@ -321,28 +321,99 @@ const getUserById = async (req, res) => {
 };
 
 // Update User
+// Update User
 const updateUser = async (req, res) => {
   try {
-    const { name, email, phone, role } = req.body;
+    const { name, email, phone, role, coin, amount } = req.body;
+    const userId = req.params.id;
+
+    // Validate required fields
+    if (!name || !email || !phone || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, phone, and role are required fields",
+      });
+    }
+
+    // Validate coin and amount are numbers if provided
+    if (coin && isNaN(coin)) {
+      return res.status(400).json({
+        success: false,
+        message: "Coin must be a number",
+      });
+    }
+
+    if (amount && isNaN(amount)) {
+      return res.status(400).json({
+        success: false,
+        message: "Amount must be a number",
+      });
+    }
+
+    // Prepare update data
+    const updateData = {
+      name,
+      email,
+      phone,
+      role,
+    };
+
+    // Only update coin/amount if provided
+    if (coin !== undefined) {
+      updateData.coin = parseFloat(coin);
+    }
+    if (amount !== undefined) {
+      updateData.amount = parseFloat(amount);
+    }
+
     const updatedUser = await UserRegisterModel.findByIdAndUpdate(
-      req.params.id,
-      { name, email, phone, role, coin, amount },
-      { new: true }
-    );
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select("name email phone role coin amount");
 
     if (!updatedUser) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      updatedUser,
+      user: updatedUser,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error });
+    console.error("Update Error:", error);
+
+    // Handle specific errors
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID format",
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating user",
+      error: error.message,
+    });
   }
 };
 
