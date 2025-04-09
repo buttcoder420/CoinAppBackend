@@ -283,7 +283,7 @@ const getAllUsers = async (req, res) => {
     // Fetching only the required fields
     const users = await UserRegisterModel.find(
       {},
-      "name email phone coin role"
+      "name email phone coin role amount"
     );
 
     // Respond with the total number of users and their details
