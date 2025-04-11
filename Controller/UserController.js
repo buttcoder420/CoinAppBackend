@@ -483,6 +483,77 @@ const convertAmountToCoins = async (req, res) => {
   }
 };
 
+// getUserReferralsController.js
+
+const getUserReferrals = async (req, res) => {
+  try {
+    const userId = req.auth._id;
+
+    // Logged-in user ki info nikaal lo
+    const currentUser = await UserRegisterModel.findById(userId);
+    if (!currentUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const myReferralCode = currentUser.referralCode;
+
+    // Jitne logon ne is code se signup kiya unko fetch karo
+    const referredUsers = await UserRegisterModel.find(
+      { referredBy: myReferralCode },
+      "name email coin amount createdAt"
+    );
+
+    // Total reward calculate karo
+    let totalCoinsEarned = 0;
+    let totalAmountEarned = 0;
+
+    referredUsers.forEach((user) => {
+      totalCoinsEarned += user.coin || 0;
+      totalAmountEarned += user.amount || 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalReferred: referredUsers.length,
+      totalCoinsEarned,
+      totalAmountEarned,
+      referredUsers,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+const getReferralLink = async (req, res) => {
+  try {
+    const userId = req.auth._id;
+
+    const user = await UserRegisterModel.findById(
+      userId,
+      "referralCode referralLink"
+    );
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      referralCode: user.referralCode,
+      referralLink: user.referralLink,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   requireSign,
   IsAdmin,
@@ -495,4 +566,6 @@ module.exports = {
   updateUser,
   deleteUser,
   convertAmountToCoins,
+  getUserReferrals,
+  getReferralLink,
 };
