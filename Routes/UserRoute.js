@@ -11,6 +11,8 @@ const {
   updateUser,
   deleteUser,
   convertAmountToCoins,
+  getUserReferrals,
+  getReferralLink,
 } = require("../Controller/UserController");
 const { IsAdmin } = require("../Controller/DailyRewardController");
 
@@ -36,5 +38,9 @@ router.put("/update-user/:id", requireSign, IsAdmin, updateUser);
 router.delete("/delete/:id", requireSign, IsAdmin, deleteUser);
 
 router.post("/convert-coins", requireSign, convertAmountToCoins);
+
+router.get("/referrals", requireSign, getUserReferrals);
+
+router.get("/referral-link", requireSign, getReferralLink);
 
 module.exports = router;
