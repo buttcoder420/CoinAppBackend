@@ -532,25 +532,39 @@ const getReferralLink = async (req, res) => {
   try {
     const userId = req.auth._id;
 
-    const user = await UserRegisterModel.findById(
-      userId,
-      "referralCode referralLink"
-    );
+    const user = await UserRegisterModel.findById(userId);
+
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
+
+    // Find all referred users
+    const referredUsers = await UserRegisterModel.find({
+      referredBy: user.referralCode,
+    });
+
+    const totalReferrals = referredUsers.length;
+    const coinsEarned = totalReferrals * 500;
+    const amountEarned = totalReferrals * 0.3;
 
     res.status(200).json({
       success: true,
       referralCode: user.referralCode,
       referralLink: user.referralLink,
+      totalReferrals,
+      coinsEarned,
+      amountEarned,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
+    console.error("Referral Stats Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
 
